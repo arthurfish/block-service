@@ -1,6 +1,7 @@
 DROP TABLE IF EXISTS blocks;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 CREATE TABLE blocks (
-                        block_id UUID PRIMARY KEY,
+                        block_id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
                         block_order INTEGER,
                         channel_id UUID,
                         is_plaintext VARCHAR(64),

@@ -2,23 +2,32 @@ package io.github.arthurfish.appender.blockservice
 
 import org.springframework.jdbc.core.RowMapper
 import org.springframework.jdbc.core.simple.JdbcClient
+import org.springframework.stereotype.Repository
 import java.sql.ResultSet
 
+@Repository
 class BlockRepository(private val jdbcClient: JdbcClient) {
-  fun appendBlock(block: BlockModel){
-    val sql = "INSERT INTO blocks (block_id, channel_id, is_plaintext, attached_block_id, block_content) VALUES (:block_id, :channel_id, :is_plaintext, :block_content)"
+  fun appendBlock(channelId: String,  blockContent: String, isPlaintext: Boolean = true, attachedBlockId: String? = null){
+    val sql = "INSERT INTO blocks (channel_id, is_plaintext, attached_block_id, block_content) VALUES (:channel_id::UUID, :is_plaintext, :attached_block_id, :block_content)"
     jdbcClient.sql(sql).params(mapOf(
-      "block_id" to block.blockId,
-      "channel_id" to block.channelId,
-      "is_plaintext" to block.isPlaintext,
-      "attached_block_id" to block.attachedBlockId,
-      "block_content" to block.blockContent))
+      "channel_id" to channelId,
+      "is_plaintext" to if (isPlaintext) "true" else "false",
+      "attached_block_id" to attachedBlockId,
+      "block_content" to blockContent))
       .update()
   }
 
   fun getBlocksWhichOrderLagerThan(channelId: String, currentOrder: Long): List<BlockModel> {
-    val sql = "SELECT * from blocks WHERE block_order > :current_order ORDER BY block_order"
-    val result = jdbcClient.sql(sql).params("current_order" to currentOrder).query(BlockRowMapper()).list()
+    val sql = """
+    SELECT * FROM blocks 
+    WHERE block_order > :current_order 
+    AND channel_id = CAST(:channel_id AS UUID) 
+    ORDER BY block_order
+"""
+    val result = jdbcClient.sql(sql)
+      .params(mapOf("current_order" to currentOrder,
+        "channel_id" to channelId))
+      .query(BlockRowMapper()).list()
     return result
   }
 

@@ -30,7 +30,7 @@ class RabbitMQConfig {
     return BindingBuilder
       .bind(blockOperationQueue)
       .to(appenderCoreExchange)
-      .whereAny("block_operation")
+      .whereAny("channel_block_operation")
       .exist()
 
   }
