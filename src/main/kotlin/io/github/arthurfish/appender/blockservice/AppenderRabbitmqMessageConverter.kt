@@ -9,14 +9,17 @@ import java.nio.charset.Charset
 
 class AppenderRabbitMqTemplate{
   companion object{
+    val log = LoggerFactory.getLogger(AppenderRabbitMqTemplate::class.java)
     fun sendToRabbitMq(rabbitTemplate: RabbitTemplate, message: Map<String, String>, excludeKey: String? = null, exchangeName: String = "appender-core-exchange") {
-      val processedMessage = if (excludeKey != null){ message.minus(excludeKey) }else message
+      log.info("Will merge the header and send: $message")
       rabbitTemplate.convertAndSend(
         exchangeName,
         "default.key",
-        processedMessage
+        message
       ){
-        msg -> message.forEach{(k, v) -> msg.messageProperties.headers[k] = v}
+        msg -> message.forEach{(k, v) ->
+          if(k != excludeKey)
+            msg.messageProperties.headers[k] = v}
         msg
       }
     }

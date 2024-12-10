@@ -20,9 +20,9 @@ class BlockOperationMessageService(private val repository: BlockRepository, priv
       for(message in syncMessages){
         AppenderRabbitMqTemplate.sendToRabbitMq(rabbitTemplate, message, "block_content")
       }
-      val syncCompleteMessage = message.plus(
-        "sync_complete" to "true"
-      )
+      val syncCompleteMessage = message
+        .minus("channel_block_operation")
+        .plus("channel_block_result" to "sync_complete")
       AppenderRabbitMqTemplate.sendToRabbitMq(rabbitTemplate, syncCompleteMessage)
     }
   }
@@ -35,11 +35,14 @@ class BlockOperationMessageService(private val repository: BlockRepository, priv
   }
 
   fun syncBlock(message: Map<String, String>): List<Map<String, String>> {
+    log.info("SYNC block. message:${message}")
     val channelId = message["channel_id"]!!
     val ownedBlocks = message["owned_blocks"]!!.toLong()
     val retrievedBlocks = repository.getBlocksWhichOrderLagerThan(channelId, ownedBlocks)
+    log.info("Retrieved block: $retrievedBlocks")
     return retrievedBlocks.map{ block ->
-      message.plus(mapOf(
+      message.minus("channel_block_operation")
+        .plus(mapOf(
         "channel_block_result" to "syncing",
         "is_plaintext" to block.isPlaintext,
         "block_order" to block.blockOrder!!.toString(),
